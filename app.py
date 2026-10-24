@@ -6,6 +6,8 @@ from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
 
+APP_VERSION = "1.0.1"
+
 DATABASE = Path(__file__).with_name("library.db")
 LOAN_PERIOD_DAYS = 14
 FINE_PER_DAY = 5
