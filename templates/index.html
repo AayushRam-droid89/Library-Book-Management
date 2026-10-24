@@ -69,9 +69,10 @@
             <div class="panel">
                 <h2>Issue a Book</h2>
                 <form id="issue-form">
-                    <label for="issue-book-id">Book ID</label>
-                    <input id="issue-book-id" name="book_id" type="number"
-                           min="1" required>
+                    <label for="issue-book-id">Select an available book</label>
+                    <select id="issue-book-id" name="book_id" required>
+                        <option value="">Loading books...</option>
+                    </select>
 
                     <label for="member-id">Member ID</label>
                     <input id="member-id" name="member_id" required>
@@ -83,9 +84,10 @@
 
                 <h2>Return a Book</h2>
                 <form id="return-form">
-                    <label for="return-book-id">Book ID</label>
-                    <input id="return-book-id" name="book_id" type="number"
-                           min="1" required>
+                    <label for="return-book-id">Select a book to return</label>
+                    <select id="return-book-id" name="book_id" required>
+                        <option value="">Loading books...</option>
+                    </select>
                     <button type="submit">Return Book</button>
                 </form>
                 <p class="hint">The return response includes any late fine.</p>
@@ -149,6 +151,51 @@
                 }
             });
         }
+
+        async function loadBookDropdowns() {
+            const issueSelect = document.getElementById("issue-book-id");
+            const returnSelect = document.getElementById("return-book-id");
+
+            try {
+                const response = await fetch("/api/books");
+                const books = await response.json();
+
+                issueSelect.replaceChildren();
+                returnSelect.replaceChildren();
+
+                issueSelect.add(new Option("Choose an available book...", ""));
+                returnSelect.add(new Option("Choose an issued book...", ""));
+
+                books
+                    .sort((a, b) => Number(a.id) - Number(b.id))
+                    .forEach((book) => {
+                    const optionText = `#${book.id} — ${book.title} (${book.author})`;
+
+                    if (book.available) {
+                        issueSelect.add(new Option(optionText, book.id));
+                    } else {
+                        returnSelect.add(new Option(optionText, book.id));
+                    }
+                });
+
+                if (issueSelect.options.length === 1) {
+                    issueSelect.add(new Option("No available books", ""));
+                }
+
+                if (returnSelect.options.length === 1) {
+                    returnSelect.add(new Option("No books currently issued", ""));
+                }
+            } catch (error) {
+                issueSelect.replaceChildren(
+                    new Option("Could not load books", "")
+                );
+                returnSelect.replaceChildren(
+                    new Option("Could not load books", "")
+                );
+            }
+        }
+
+        loadBookDropdowns();
 
         submitForm("add-form", "/api/books");
         submitForm("issue-form", "/api/issue");
