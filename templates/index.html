@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus Library | Book Management</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <div>
+            <h1>Campus Library</h1>
+            <p>Library Book Management System</p>
+        </div>
+        <span class="status">Library Portal</span>
+    </header>
+
+    <main>
+        <section class="welcome">
+            <h2>Manage your library</h2>
+            <p>Search books, add new titles, issue books and process returns.</p>
+        </section>
+
+        <section class="panel">
+            <h2>Search Catalog</h2>
+            <form action="/" method="get" class="search-form">
+                <input type="text" name="q" placeholder="Search by title or author..."
+                       value="{{ request.args.get('q', '') }}">
+                <button type="submit">Search</button>
+                <a class="button secondary" href="/">Clear</a>
+            </form>
+            <div class="book-list">
+                {% for book in books %}
+                <article class="book">
+                    <div>
+                        <h3>{{ book['title'] }}</h3>
+                        <p>By {{ book['author'] }}</p>
+                        <small>ISBN: {{ book['isbn'] }}</small>
+                    </div>
+                    {% if book['available'] %}
+                        <span class="badge available">Available</span>
+                    {% else %}
+                        <span class="badge issued">Issued</span>
+                    {% endif %}
+                </article>
+                {% else %}
+                    <p>No books found. Add a book or try another search.</p>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="two-columns">
+            <div class="panel">
+                <h2>Add a Book</h2>
+                <form id="add-form">
+                    <label for="title">Book title</label>
+                    <input id="title" name="title" required>
+
+                    <label for="author">Author</label>
+                    <input id="author" name="author" required>
+
+                    <label for="isbn">ISBN</label>
+                    <input id="isbn" name="isbn" required>
+
+                    <button type="submit">Add Book</button>
+                </form>
+            </div>
+
+            <div class="panel">
+                <h2>Issue a Book</h2>
+                <form id="issue-form">
+                    <label for="issue-book-id">Book ID</label>
+                    <input id="issue-book-id" name="book_id" type="number"
+                           min="1" required>
+
+                    <label for="member-id">Member ID</label>
+                    <input id="member-id" name="member_id" required>
+
+                    <button type="submit">Issue Book</button>
+                </form>
+
+                <hr>
+
+                <h2>Return a Book</h2>
+                <form id="return-form">
+                    <label for="return-book-id">Book ID</label>
+                    <input id="return-book-id" name="book_id" type="number"
+                           min="1" required>
+                    <button type="submit">Return Book</button>
+                </form>
+                <p class="hint">The return response includes any late fine.</p>
+            </div>
+        </section>
+
+        <section id="message" class="message" role="status" aria-live="polite"></section>
+    </main>
+
+    <footer>
+        <p>Campus Library · Python · Flask · SQLite</p>
+    </footer>
+
+    <script>
+        const message = document.getElementById("message");
+
+        async function submitForm(formId, endpoint) {
+            const form = document.getElementById(formId);
+
+            form.addEventListener("submit", async (event) => {
+                event.preventDefault();
+
+                const data = Object.fromEntries(new FormData(form).entries());
+
+                if (data.book_id) {
+                    data.book_id = Number(data.book_id);
+                }
+
+                try {
+                    const response = await fetch(endpoint, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(data)
+                    });
+
+                    const result = await response.json();
+
+                    message.textContent = response.ok
+                        ? result.message + (
+                            result.fine !== undefined
+                                ? " Fine: ₹" + result.fine
+                                : ""
+                        )
+                        : result.error || "Request failed.";
+
+                    message.className = response.ok
+                        ? "message success"
+                        : "message error";
+
+                    if (response.ok) {
+                        form.reset();
+                        if (endpoint !== "/api/return") {
+                            window.setTimeout(() => window.location.reload(), 500);
+                        } else {
+                            window.setTimeout(() => window.location.reload(), 1200);
+                        }
+                    }
+                } catch (error) {
+                    message.textContent = "Could not connect to the server.";
+                    message.className = "message error";
+                }
+            });
+        }
+
+        submitForm("add-form", "/api/books");
+        submitForm("issue-form", "/api/issue");
+        submitForm("return-form", "/api/return");
+    </script>
+</body>
+</html>
